@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>מעקב שתייה</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 { font-size: 32px; margin-bottom: 5px; }
+h2 { font-size: 20px; color: #555; }
+
+.box {
+    background: white;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 12px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}
+
+.counter {
+    font-size: 28px;
+    font-weight: bold;
+    color: #0a7cff;
+}
+
+.buttons button {
+    font-size: 22px;
+    padding: 15px 20px;
+    margin: 8px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    color: white;
+}
+
+.btn25 { background:#9cc9ff; }
+.btn50 { background:#5fa8ff; }
+.btn100 { background:#2d7dff; }
+.btn200 { background:#004fc5; }
+
+.history {
+    text-align: right;
+    font-size: 18px;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.delete {
+    color: red;
+    cursor: pointer;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1 id="title">טוען...</h1>
+<h2 id="subtitle"></h2>
+<div id="datetime"></div>
+
+<div class="box">
+    <div class="counter">
+        שתית היום: <span id="total">0</span> / <span id="limit">0</span> מ״ל
+    </div>
+</div>
+
+<div class="box buttons">
+    <button class="btn25" onclick="sendDrink(25)">+25</button>
+    <button class="btn50" onclick="sendDrink(50)">+50</button>
+    <button class="btn100" onclick="sendDrink(100)">+100</button>
+    <button class="btn200" onclick="sendDrink(200)">+200</button>
+</div>
+
+<div class="box">
+    <h3>היסטוריית שתייה</h3>
+    <div id="history" class="history"></div>
+</div>
+
+<script>
+const FETCH_WEBHOOK = "https://hook.integrator.boost.space/n33w53hpsj1ar34x25b9psqwx8sbcj0n";
+const ACTION_WEBHOOK = "https://hook.integrator.boost.space/uhlqmxm4tzn2rpy04qga5lcip6o5rnbs";
+
+let locked = false;
+
+// --- טעינה ראשונית ---
+window.onload = () => {
+    loadData();
+    setInterval(loadData, 60000);
+};
+
+// --- שליפת נתונים ---
+function loadData() {
+    fetch(FETCH_WEBHOOK + "?t=" + Date.now())
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("title").innerText = data.title;
+            document.getElementById("subtitle").innerText = data.subtitle;
+            document.getElementById("total").innerText = data.totalDrank;
+            document.getElementById("limit").innerText = data.dailyLimit;
+
+            renderHistory(data.history);
+            updateClock();
+        });
+}
+
+// --- ציור היסטוריה ---
+function renderHistory(items) {
+    const box = document.getElementById("history");
+    box.innerHTML = "";
+
+    items.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.innerHTML = `
+            <span>${row.time} – ${row.amount} מ״ל</span>
+            <span class="delete" onclick="deleteRow('${row.record_id}')">❌</span>
+        `;
+        box.appendChild(div);
+    });
+}
+
+// --- שליחת שתייה ---
+function sendDrink(amount) {
+    if (locked) return;
+    locked = true;
+
+    fetch(ACTION_WEBHOOK, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            action: "add",
+            amount: amount,
+            timestamp: new Date().toISOString()
+        })
+    }).then(() => {
+        setTimeout(() => {
+            locked = false;
+            loadData();
+        }, 1500);
+    });
+}
+
+// --- מחיקה ---
+function deleteRow(id) {
+    if (!confirm("האם למחוק את הדיווח הזה?")) return;
+
+    fetch(ACTION_WEBHOOK, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            action: "delete",
+            record_id: id
+        })
+    }).then(() => loadData());
+}
+
+// --- שעון ---
+function updateClock() {
+    const now = new Date();
+    document.getElementById("datetime").innerText =
+        now.toLocaleDateString("he-IL") + " | " +
+        now.toLocaleTimeString("he-IL");
+}
+</script>
+
+</body>
+</html>
