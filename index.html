@@ -2,81 +2,99 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>מעקב שתייה</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מעקב שתייה</title>
 
 <style>
 body {
-    font-family: Arial;
-    background: #eef2f7;
+    font-family: Arial, sans-serif;
+    background: #eef3f9;
     margin: 0;
     padding: 20px;
     text-align: center;
 }
 
-h1 { font-size: 34px; }
-h2 { color: #444; }
+h1 { font-size: 36px; margin-bottom: 5px; }
+h2 { font-size: 20px; color: #444; }
+
+#datetime { margin-bottom: 15px; }
 
 #cups {
     display: flex;
     justify-content: center;
-    gap: 15px;
+    gap: 18px;
     margin: 20px 0;
 }
 
+.cup-wrapper {
+    text-align: center;
+}
+
 .cup {
-    width: 60px;
-    height: 120px;
+    width: 80px;
+    height: 180px;
     border: 3px solid #333;
-    border-radius: 0 0 15px 15px;
+    border-radius: 0 0 18px 18px;
     position: relative;
+    background: white;
     overflow: hidden;
-    background: #fff;
 }
 
 .water {
     position: absolute;
     bottom: 0;
     width: 100%;
-    background: #4da6ff;
+    background: linear-gradient(#4da6ff, #1e6fd9);
     transition: height 0.4s;
 }
 
+.mark {
+    position: absolute;
+    width: 100%;
+    border-top: 1px dashed rgba(0,0,0,0.3);
+}
+
 .cup-label {
-    margin-top: 5px;
-    font-size: 14px;
+    margin-top: 6px;
+    font-size: 16px;
+}
+
+.buttons {
+    margin-top: 20px;
 }
 
 .buttons button {
     font-size: 22px;
-    padding: 15px 25px;
-    margin: 10px;
-    border-radius: 12px;
+    padding: 16px 28px;
+    margin: 8px;
+    border-radius: 14px;
     border: none;
     color: white;
     cursor: pointer;
 }
 
-.btn25 { background:#9cc9ff; }
+.btn25 { background:#9ecbff; }
 .btn50 { background:#6aaeff; }
-.btn100 { background:#2d7dff; }
+.btn100 { background:#2f7cff; }
 .btn200 { background:#004fc5; }
 
 .history {
-    margin-top: 20px;
+    margin-top: 25px;
     text-align: right;
+    font-size: 18px;
 }
 
-.history div {
+.history-item {
     display: flex;
     justify-content: space-between;
-    border-bottom: 1px solid #ccc;
     padding: 6px 0;
+    border-bottom: 1px solid #ccc;
 }
 
 .delete {
     color: red;
     cursor: pointer;
+    font-weight: bold;
 }
 </style>
 </head>
@@ -85,7 +103,7 @@ h2 { color: #444; }
 
 <h1 id="title">טוען...</h1>
 <h2 id="subtitle"></h2>
-<div id="time"></div>
+<div id="datetime"></div>
 
 <div id="cups"></div>
 
@@ -102,7 +120,6 @@ h2 { color: #444; }
 const FETCH_WEBHOOK = "https://hook.integrator.boost.space/n33w53hpsj1ar34x25b9psqwx8sbcj0n";
 const ACTION_WEBHOOK = "https://hook.integrator.boost.space/uhlqmxm4tzn2rpy04qga5lcip6o5rnbs";
 
-
 let locked = false;
 
 function loadData() {
@@ -118,20 +135,31 @@ function loadData() {
 }
 
 function drawCups(total, limit) {
-    const cups = document.getElementById("cups");
-    cups.innerHTML = "";
+    const container = document.getElementById("cups");
+    container.innerHTML = "";
 
     const cupSize = 200;
-    const totalCups = Math.ceil(limit / cupSize);
+    const cupCount = Math.ceil(limit / cupSize);
 
-    for (let i = 1; i <= totalCups; i++) {
-        const filled = Math.max(0, Math.min(1, (total - (i-1)*cupSize) / cupSize));
+    for (let i = 0; i < cupCount; i++) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "cup-wrapper";
 
         const cup = document.createElement("div");
         cup.className = "cup";
 
+        // קווי מדידה
+        for (let m = 1; m <= 4; m++) {
+            const mark = document.createElement("div");
+            mark.className = "mark";
+            mark.style.bottom = (m * 25) + "%";
+            cup.appendChild(mark);
+        }
+
         const water = document.createElement("div");
         water.className = "water";
+
+        const filled = Math.max(0, Math.min(1, (total - i * cupSize) / cupSize));
         water.style.height = (filled * 100) + "%";
 
         cup.appendChild(water);
@@ -140,11 +168,9 @@ function drawCups(total, limit) {
         label.className = "cup-label";
         label.innerText = "200 מ״ל";
 
-        const wrapper = document.createElement("div");
         wrapper.appendChild(cup);
         wrapper.appendChild(label);
-
-        cups.appendChild(wrapper);
+        container.appendChild(wrapper);
     }
 }
 
@@ -154,7 +180,7 @@ function sendDrink(amount) {
 
     fetch(ACTION_WEBHOOK, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             action: "add",
             amount,
@@ -174,6 +200,7 @@ function drawHistory(list) {
 
     list.forEach(row => {
         const div = document.createElement("div");
+        div.className = "history-item";
         div.innerHTML = `
             <span>${row.time} – ${row.amount} מ״ל</span>
             <span class="delete" onclick="deleteRow('${row.record_id}')">❌</span>
@@ -197,7 +224,7 @@ function deleteRow(id) {
 
 function updateClock() {
     const now = new Date();
-    document.getElementById("time").innerText =
+    document.getElementById("datetime").innerText =
         now.toLocaleDateString("he-IL") + " | " +
         now.toLocaleTimeString("he-IL");
 }
