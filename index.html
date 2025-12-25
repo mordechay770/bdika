@@ -6,124 +6,39 @@
 <title>מעקב שתייה</title>
 
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #eef3f9;
-    margin: 0;
-    padding: 20px;
-    text-align: center;
-}
-
-h1 { font-size: 34px; margin: 5px 0; }
-h2 { font-size: 22px; color: #333; margin: 5px 0 15px; }
-
-#datetime { margin-bottom: 10px; }
+body { font-family: Arial, sans-serif; background: #eef3f9; margin:0; padding:20px; text-align:center; }
+h1 { font-size: 34px; margin:5px 0; }
+h2 { font-size:22px; color:#333; margin:5px 0 15px; }
+#datetime { margin-bottom:10px; }
 
 .status-box {
-    background: #ffffff;
-    padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 15px;
-    font-size: 24px;
-    font-weight: bold;
+    background:#ffffff; padding:12px; border-radius:12px; margin-bottom:15px;
+    font-size:24px; font-weight:bold;
 }
 
-#cups {
-    display: flex;
-    justify-content: center;
-    gap: 18px;
-    margin: 20px 0;
-}
+#cups { display:flex; justify-content:center; gap:18px; margin:20px 0; }
+.cup-wrapper { text-align:center; }
+.cup { width:90px; height:200px; border:3px solid #333; border-radius:0 0 18px 18px; position:relative; background:white; overflow:hidden; }
+.water { position:absolute; bottom:0; width:100%; background:linear-gradient(#5bb5ff,#1d6fe2); transition:height 0.4s; }
+.mark { position:absolute; width:100%; border-top:1px dashed rgba(0,0,0,0.3); }
+.cup-label { margin-top:6px; font-size:16px; }
 
-.cup-wrapper { text-align: center; }
-
-.cup {
-    width: 90px;
-    height: 200px;
-    border: 3px solid #333;
-    border-radius: 0 0 18px 18px;
-    position: relative;
-    background: white;
-    overflow: hidden;
-}
-
-.water {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    background: linear-gradient(#5bb5ff, #1d6fe2);
-    transition: height 0.4s;
-}
-
-.mark {
-    position: absolute;
-    width: 100%;
-    border-top: 1px dashed rgba(0,0,0,0.3);
-}
-
-.cup-label {
-    margin-top: 6px;
-    font-size: 16px;
-}
-
-.buttons button {
-    font-size: 22px;
-    padding: 16px 28px;
-    margin: 8px;
-    border-radius: 14px;
-    border: none;
-    color: white;
-    cursor: pointer;
-}
-
+.buttons button { font-size:22px; padding:16px 28px; margin:8px; border-radius:14px; border:none; color:white; cursor:pointer; }
 .btn25 { background:#9ecbff; }
 .btn50 { background:#6aaeff; }
 .btn100 { background:#2f7cff; }
 .btn200 { background:#004fc5; }
 
-.history-title {
-    margin-top: 25px;
-    font-size: 24px;
-    font-weight: bold;
-}
+.history-title { margin-top:25px; font-size:24px; font-weight:bold; }
+.history { margin-top:10px; text-align:right; font-size:18px; }
+.history-item { display:flex; justify-content:space-between; border-bottom:1px solid #ccc; padding:6px 0; }
+.delete { color:red; cursor:pointer; font-weight:bold; }
 
-.history {
-    margin-top: 10px;
-    text-align: right;
-    font-size: 18px;
-}
-
-.history-item {
-    display: flex;
-    justify-content: space-between;
-    border-bottom: 1px solid #ccc;
-    padding: 6px 0;
-}
-
-.delete {
-    color: red;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-/* הודעת הצלחה */
-.toast {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #2ecc71;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-size: 18px;
-    display: none;
-}
+.toast { position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#2ecc71; color:white; padding:12px 24px; border-radius:10px; font-size:18px; display:none; }
 </style>
 </head>
 
 <body>
-
 <h1 id="title">טוען...</h1>
 <h2 id="subtitle"></h2>
 <div id="datetime"></div>
@@ -147,136 +62,128 @@ h2 { font-size: 22px; color: #333; margin: 5px 0 15px; }
 <script>
 const FETCH_WEBHOOK = "https://hook.integrator.boost.space/n33w53hpsj1ar34x25b9psqwx8sbcj0n";
 const ACTION_WEBHOOK = "https://hook.integrator.boost.space/uhlqmxm4tzn2rpy04qga5lcip6o5rnbs"
-
-let locked = false;
+let locked=false;
 
 function showToast(text) {
-    const t = document.getElementById("toast");
-    t.innerText = text;
-    t.style.display = "block";
-    setTimeout(() => t.style.display = "none", 2000);
+    const t=document.getElementById("toast");
+    t.innerText=text; t.style.display="block";
+    setTimeout(()=>t.style.display="none",2000);
 }
 
 function loadData() {
-    fetch(FETCH_WEBHOOK + "?t=" + Date.now())
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById("title").innerText = data.title;
-            document.getElementById("subtitle").innerText = data.subtitle;
+    fetch(FETCH_WEBHOOK+"?t="+Date.now())
+        .then(r=>r.json())
+        .then(data=>{
+            document.getElementById("title").innerText=data.title;
+            document.getElementById("subtitle").innerText=data.subtitle;
 
-            document.getElementById("statusBox").innerText =
-                `שתית היום ${data.totalDrank} מתוך ${data.dailyLimit} מ״ל`;
+            const statusBox=document.getElementById("statusBox");
+            statusBox.style.color="black";
+            let over=0;
+            if(data.totalDrank>data.dailyLimit) over=data.totalDrank-data.dailyLimit;
 
-            drawCups(data.totalDrank, data.dailyLimit);
+            statusBox.innerText=`שתית היום ${data.totalDrank} מתוך ${data.dailyLimit} מ״ל`+
+                                (over>0?` (חרגת ב־${over} מ״ל)`:"");
+
+            if(over>0) statusBox.style.color="red";
+
+            drawCups(data.totalDrank,data.dailyLimit);
             drawHistory(data.history.reverse());
             updateClock();
         });
 }
 
 function drawCups(total, limit) {
-    const el = document.getElementById("cups");
-    el.innerHTML = "";
+    const el=document.getElementById("cups");
+    el.innerHTML="";
 
-    const cupSize = 200;
-    const count = Math.ceil(limit / cupSize);
+    const cupSize=200;
+    const count=Math.ceil(limit/cupSize);
 
-    for (let i = 0; i < count; i++) {
-        const wrap = document.createElement("div");
-        wrap.className = "cup-wrapper";
+    for(let i=0;i<count;i++){
+        const wrap=document.createElement("div"); wrap.className="cup-wrapper";
+        const cup=document.createElement("div"); cup.className="cup";
 
-        const cup = document.createElement("div");
-        cup.className = "cup";
-
-        for (let ml = 20; ml < 200; ml += 20) {
-            const mark = document.createElement("div");
-            mark.className = "mark";
-            mark.style.bottom = (ml / 200 * 100) + "%";
-            if (ml % 100 === 0) {
-                mark.style.borderTop = "2px solid rgba(0,0,0,0.6)";
-            }
+        for(let ml=20;ml<200;ml+=20){
+            const mark=document.createElement("div"); mark.className="mark";
+            mark.style.bottom=(ml/200*100)+"%";
+            if(ml%100===0) mark.style.borderTop="2px solid rgba(0,0,0,0.6)";
             cup.appendChild(mark);
         }
 
-        const water = document.createElement("div");
-        water.className = "water";
-
-        const filled = Math.max(0, Math.min(1, (total - i * cupSize) / cupSize));
-        water.style.height = (filled * 100) + "%";
-
+        const water=document.createElement("div"); water.className="water";
+        const filled=Math.max(0,Math.min(1,(total-i*cupSize)/cupSize));
+        water.style.height=(filled*100)+"%";
         cup.appendChild(water);
 
-        const label = document.createElement("div");
-        label.className = "cup-label";
-        label.innerText = "200 מ״ל";
+        const label=document.createElement("div"); label.className="cup-label"; label.innerText="200 מ״ל";
+        wrap.appendChild(cup); wrap.appendChild(label); el.appendChild(wrap);
+    }
 
-        wrap.appendChild(cup);
-        wrap.appendChild(label);
+    if(total>limit){
+        const over=total-limit;
+        const wrap=document.createElement("div"); wrap.className="cup-wrapper";
+        const cup=document.createElement("div"); cup.className="cup"; cup.style.borderColor="red";
+
+        const water=document.createElement("div"); water.className="water"; water.style.background="red";
+        const filled=Math.min(1,over/cupSize);
+        water.style.height=(filled*100)+"%";
+        cup.appendChild(water); wrap.appendChild(cup);
+
+        const label=document.createElement("div"); label.className="cup-label";
+        label.innerText=`${over} מ״ל חריגה`; wrap.appendChild(label);
         el.appendChild(wrap);
     }
 }
 
-function sendDrink(amount) {
-    if (locked) return;
-    locked = true;
+function sendDrink(amount){
+    if(locked) return;
+    locked=true;
 
-    fetch(ACTION_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "add",
-            amount,
-            timestamp: new Date().toISOString()
-        })
-    }).then(() => {
+    fetch(ACTION_WEBHOOK,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"add",amount,timestamp:new Date().toISOString()})
+    }).then(()=>{
         showToast("הדיווח התקבל");
-        setTimeout(() => {
-            locked = false;
-            loadData();
-        }, 1500);
+        setTimeout(()=>{
+            locked=false; loadData();
+        },1500);
     });
 }
 
-function drawHistory(list) {
-    const box = document.getElementById("history");
-    box.innerHTML = "";
-
-    list.forEach(row => {
-        const div = document.createElement("div");
-        div.className = "history-item";
-        div.innerHTML = `
-            <span>${row.time} – ${row.amount} מ״ל</span>
-            <span class="delete" onclick="deleteRow('${row.record_id}')">❌</span>
-        `;
+function drawHistory(list){
+    const box=document.getElementById("history"); box.innerHTML="";
+    list.forEach(row=>{
+        const div=document.createElement("div"); div.className="history-item";
+        div.innerHTML=`<span>${row.time} – ${row.amount} מ״ל</span>
+                       <span class="delete" onclick="deleteRow('${row.record_id}')">❌</span>`;
         box.appendChild(div);
     });
 }
 
-function deleteRow(id) {
-    if (!confirm("למחוק את הדיווח?")) return;
+function deleteRow(id){
+    if(!confirm("למחוק את הדיווח?")) return;
 
-    fetch(ACTION_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "delete",
-            record_id: id
-        })
-    }).then(() => {
+    fetch(ACTION_WEBHOOK,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"delete",record_id:id})
+    }).then(()=>{
         showToast("הדיווח נמחק");
-        setTimeout(loadData, 1200);
+        setTimeout(loadData,1200);
     });
 }
 
-function updateClock() {
-    const now = new Date();
-    document.getElementById("datetime").innerText =
-        now.toLocaleDateString("he-IL") + " | " +
-        now.toLocaleTimeString("he-IL");
+function updateClock(){
+    const now=new Date();
+    document.getElementById("datetime").innerText=
+        now.toLocaleDateString("he-IL")+" | "+now.toLocaleTimeString("he-IL");
 }
 
 loadData();
-setInterval(loadData, 60000);
+setInterval(loadData,60000);
 </script>
-
 </body>
 </html>
+
