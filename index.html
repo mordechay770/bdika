@@ -14,9 +14,8 @@ body {
     text-align: center;
 }
 
-h1 { font-size: 36px; margin-bottom: 5px; }
+h1 { font-size: 34px; margin-bottom: 5px; }
 h2 { font-size: 20px; color: #444; }
-
 #datetime { margin-bottom: 15px; }
 
 #cups {
@@ -26,13 +25,11 @@ h2 { font-size: 20px; color: #444; }
     margin: 20px 0;
 }
 
-.cup-wrapper {
-    text-align: center;
-}
+.cup-wrapper { text-align: center; }
 
 .cup {
-    width: 80px;
-    height: 180px;
+    width: 90px;
+    height: 200px;
     border: 3px solid #333;
     border-radius: 0 0 18px 18px;
     position: relative;
@@ -44,7 +41,7 @@ h2 { font-size: 20px; color: #444; }
     position: absolute;
     bottom: 0;
     width: 100%;
-    background: linear-gradient(#4da6ff, #1e6fd9);
+    background: linear-gradient(#5bb5ff, #1d6fe2);
     transition: height 0.4s;
 }
 
@@ -57,10 +54,6 @@ h2 { font-size: 20px; color: #444; }
 .cup-label {
     margin-top: 6px;
     font-size: 16px;
-}
-
-.buttons {
-    margin-top: 20px;
 }
 
 .buttons button {
@@ -87,8 +80,8 @@ h2 { font-size: 20px; color: #444; }
 .history-item {
     display: flex;
     justify-content: space-between;
-    padding: 6px 0;
     border-bottom: 1px solid #ccc;
+    padding: 6px 0;
 }
 
 .delete {
@@ -101,7 +94,7 @@ h2 { font-size: 20px; color: #444; }
 
 <body>
 
-<h1 id="title">טוען...</h1>
+<h1 id="title">טוען נתונים...</h1>
 <h2 id="subtitle"></h2>
 <div id="datetime"></div>
 
@@ -124,35 +117,39 @@ let locked = false;
 
 function loadData() {
     fetch(FETCH_WEBHOOK + "?t=" + Date.now())
-        .then(r => r.json())
+        .then(res => res.json())
         .then(data => {
-            document.getElementById("title").innerText = data.title;
-            document.getElementById("subtitle").innerText = data.subtitle;
+            document.getElementById("title").innerText = data.title || "";
+            document.getElementById("subtitle").innerText = data.subtitle || "";
+
             drawCups(data.totalDrank, data.dailyLimit);
-            drawHistory(data.history);
+            drawHistory(data.history || []);
             updateClock();
-        });
+        })
+        .catch(err => console.error("FETCH ERROR:", err));
 }
 
 function drawCups(total, limit) {
-    const container = document.getElementById("cups");
-    container.innerHTML = "";
+    const el = document.getElementById("cups");
+    el.innerHTML = "";
 
     const cupSize = 200;
-    const cupCount = Math.ceil(limit / cupSize);
+    const count = Math.ceil(limit / cupSize);
 
-    for (let i = 0; i < cupCount; i++) {
-        const wrapper = document.createElement("div");
-        wrapper.className = "cup-wrapper";
+    for (let i = 0; i < count; i++) {
+        const wrap = document.createElement("div");
+        wrap.className = "cup-wrapper";
 
         const cup = document.createElement("div");
         cup.className = "cup";
 
-        // קווי מדידה
-        for (let m = 1; m <= 4; m++) {
+        for (let ml = 20; ml < 200; ml += 20) {
             const mark = document.createElement("div");
             mark.className = "mark";
-            mark.style.bottom = (m * 25) + "%";
+            mark.style.bottom = (ml / 200 * 100) + "%";
+            if (ml % 100 === 0) {
+                mark.style.borderTop = "2px solid rgba(0,0,0,0.6)";
+            }
             cup.appendChild(mark);
         }
 
@@ -168,9 +165,9 @@ function drawCups(total, limit) {
         label.className = "cup-label";
         label.innerText = "200 מ״ל";
 
-        wrapper.appendChild(cup);
-        wrapper.appendChild(label);
-        container.appendChild(wrapper);
+        wrap.appendChild(cup);
+        wrap.appendChild(label);
+        el.appendChild(wrap);
     }
 }
 
@@ -180,7 +177,7 @@ function sendDrink(amount) {
 
     fetch(ACTION_WEBHOOK, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             action: "add",
             amount,
@@ -214,7 +211,7 @@ function deleteRow(id) {
 
     fetch(ACTION_WEBHOOK, {
         method: "POST",
-        headers: {"Content-Type":"application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             action: "delete",
             record_id: id
@@ -235,3 +232,4 @@ setInterval(loadData, 60000);
 
 </body>
 </html>
+
