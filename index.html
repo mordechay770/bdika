@@ -7,61 +7,76 @@
 
 <style>
 body {
-    font-family: Arial, sans-serif;
-    background: #f5f7fa;
+    font-family: Arial;
+    background: #eef2f7;
     margin: 0;
     padding: 20px;
     text-align: center;
 }
 
-h1 { font-size: 32px; margin-bottom: 5px; }
-h2 { font-size: 20px; color: #555; }
+h1 { font-size: 34px; }
+h2 { color: #444; }
 
-.box {
-    background: white;
-    padding: 15px;
-    margin: 15px 0;
-    border-radius: 12px;
-    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+#cups {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
 }
 
-.counter {
-    font-size: 28px;
-    font-weight: bold;
-    color: #0a7cff;
+.cup {
+    width: 60px;
+    height: 120px;
+    border: 3px solid #333;
+    border-radius: 0 0 15px 15px;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+}
+
+.water {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: #4da6ff;
+    transition: height 0.4s;
+}
+
+.cup-label {
+    margin-top: 5px;
+    font-size: 14px;
 }
 
 .buttons button {
     font-size: 22px;
-    padding: 15px 20px;
-    margin: 8px;
+    padding: 15px 25px;
+    margin: 10px;
     border-radius: 12px;
     border: none;
-    cursor: pointer;
     color: white;
+    cursor: pointer;
 }
 
 .btn25 { background:#9cc9ff; }
-.btn50 { background:#5fa8ff; }
+.btn50 { background:#6aaeff; }
 .btn100 { background:#2d7dff; }
 .btn200 { background:#004fc5; }
 
 .history {
+    margin-top: 20px;
     text-align: right;
-    font-size: 18px;
 }
 
-.history-item {
+.history div {
     display: flex;
     justify-content: space-between;
+    border-bottom: 1px solid #ccc;
     padding: 6px 0;
-    border-bottom: 1px solid #ddd;
 }
 
 .delete {
     color: red;
     cursor: pointer;
-    font-weight: bold;
 }
 </style>
 </head>
@@ -70,61 +85,95 @@ h2 { font-size: 20px; color: #555; }
 
 <h1 id="title">טוען...</h1>
 <h2 id="subtitle"></h2>
-<div id="datetime"></div>
+<div id="time"></div>
 
-<div class="box">
-    <div class="counter">
-        שתית היום: <span id="total">0</span> / <span id="limit">0</span> מ״ל
-    </div>
-</div>
+<div id="cups"></div>
 
-<div class="box buttons">
+<div class="buttons">
     <button class="btn25" onclick="sendDrink(25)">+25</button>
     <button class="btn50" onclick="sendDrink(50)">+50</button>
     <button class="btn100" onclick="sendDrink(100)">+100</button>
     <button class="btn200" onclick="sendDrink(200)">+200</button>
 </div>
 
-<div class="box">
-    <h3>היסטוריית שתייה</h3>
-    <div id="history" class="history"></div>
-</div>
+<div class="history" id="history"></div>
 
 <script>
 const FETCH_WEBHOOK = "https://hook.integrator.boost.space/n33w53hpsj1ar34x25b9psqwx8sbcj0n";
 const ACTION_WEBHOOK = "https://hook.integrator.boost.space/uhlqmxm4tzn2rpy04qga5lcip6o5rnbs";
 
+
 let locked = false;
 
-// --- טעינה ראשונית ---
-window.onload = () => {
-    loadData();
-    setInterval(loadData, 60000);
-};
-
-// --- שליפת נתונים ---
 function loadData() {
     fetch(FETCH_WEBHOOK + "?t=" + Date.now())
         .then(r => r.json())
         .then(data => {
             document.getElementById("title").innerText = data.title;
             document.getElementById("subtitle").innerText = data.subtitle;
-            document.getElementById("total").innerText = data.totalDrank;
-            document.getElementById("limit").innerText = data.dailyLimit;
-
-            renderHistory(data.history);
+            drawCups(data.totalDrank, data.dailyLimit);
+            drawHistory(data.history);
             updateClock();
         });
 }
 
-// --- ציור היסטוריה ---
-function renderHistory(items) {
+function drawCups(total, limit) {
+    const cups = document.getElementById("cups");
+    cups.innerHTML = "";
+
+    const cupSize = 200;
+    const totalCups = Math.ceil(limit / cupSize);
+
+    for (let i = 1; i <= totalCups; i++) {
+        const filled = Math.max(0, Math.min(1, (total - (i-1)*cupSize) / cupSize));
+
+        const cup = document.createElement("div");
+        cup.className = "cup";
+
+        const water = document.createElement("div");
+        water.className = "water";
+        water.style.height = (filled * 100) + "%";
+
+        cup.appendChild(water);
+
+        const label = document.createElement("div");
+        label.className = "cup-label";
+        label.innerText = "200 מ״ל";
+
+        const wrapper = document.createElement("div");
+        wrapper.appendChild(cup);
+        wrapper.appendChild(label);
+
+        cups.appendChild(wrapper);
+    }
+}
+
+function sendDrink(amount) {
+    if (locked) return;
+    locked = true;
+
+    fetch(ACTION_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            action: "add",
+            amount,
+            timestamp: new Date().toISOString()
+        })
+    }).then(() => {
+        setTimeout(() => {
+            locked = false;
+            loadData();
+        }, 1200);
+    });
+}
+
+function drawHistory(list) {
     const box = document.getElementById("history");
     box.innerHTML = "";
 
-    items.forEach(row => {
+    list.forEach(row => {
         const div = document.createElement("div");
-        div.className = "history-item";
         div.innerHTML = `
             <span>${row.time} – ${row.amount} מ״ל</span>
             <span class="delete" onclick="deleteRow('${row.record_id}')">❌</span>
@@ -133,48 +182,28 @@ function renderHistory(items) {
     });
 }
 
-// --- שליחת שתייה ---
-function sendDrink(amount) {
-    if (locked) return;
-    locked = true;
-
-    fetch(ACTION_WEBHOOK, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            action: "add",
-            amount: amount,
-            timestamp: new Date().toISOString()
-        })
-    }).then(() => {
-        setTimeout(() => {
-            locked = false;
-            loadData();
-        }, 1500);
-    });
-}
-
-// --- מחיקה ---
 function deleteRow(id) {
-    if (!confirm("האם למחוק את הדיווח הזה?")) return;
+    if (!confirm("למחוק את הדיווח?")) return;
 
     fetch(ACTION_WEBHOOK, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
             action: "delete",
             record_id: id
         })
-    }).then(() => loadData());
+    }).then(loadData);
 }
 
-// --- שעון ---
 function updateClock() {
     const now = new Date();
-    document.getElementById("datetime").innerText =
+    document.getElementById("time").innerText =
         now.toLocaleDateString("he-IL") + " | " +
         now.toLocaleTimeString("he-IL");
 }
+
+loadData();
+setInterval(loadData, 60000);
 </script>
 
 </body>
