@@ -14,9 +14,19 @@ body {
     text-align: center;
 }
 
-h1 { font-size: 34px; margin-bottom: 5px; }
-h2 { font-size: 20px; color: #444; }
-#datetime { margin-bottom: 15px; }
+h1 { font-size: 34px; margin: 5px 0; }
+h2 { font-size: 22px; color: #333; margin: 5px 0 15px; }
+
+#datetime { margin-bottom: 10px; }
+
+.status-box {
+    background: #ffffff;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    font-size: 24px;
+    font-weight: bold;
+}
 
 #cups {
     display: flex;
@@ -71,8 +81,14 @@ h2 { font-size: 20px; color: #444; }
 .btn100 { background:#2f7cff; }
 .btn200 { background:#004fc5; }
 
-.history {
+.history-title {
     margin-top: 25px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.history {
+    margin-top: 10px;
     text-align: right;
     font-size: 18px;
 }
@@ -89,14 +105,30 @@ h2 { font-size: 20px; color: #444; }
     cursor: pointer;
     font-weight: bold;
 }
+
+/* הודעת הצלחה */
+.toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2ecc71;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 18px;
+    display: none;
+}
 </style>
 </head>
 
 <body>
 
-<h1 id="title">טוען נתונים...</h1>
+<h1 id="title">טוען...</h1>
 <h2 id="subtitle"></h2>
 <div id="datetime"></div>
+
+<div class="status-box" id="statusBox"></div>
 
 <div id="cups"></div>
 
@@ -107,26 +139,38 @@ h2 { font-size: 20px; color: #444; }
     <button class="btn200" onclick="sendDrink(200)">+200</button>
 </div>
 
+<div class="history-title">היסטוריית שתייה</div>
 <div class="history" id="history"></div>
+
+<div class="toast" id="toast">✔ הדיווח התקבל</div>
 
 <script>
 const FETCH_WEBHOOK = "https://hook.integrator.boost.space/n33w53hpsj1ar34x25b9psqwx8sbcj0n";
-const ACTION_WEBHOOK = "https://hook.integrator.boost.space/uhlqmxm4tzn2rpy04qga5lcip6o5rnbs";
+const ACTION_WEBHOOK = "https://hook.integrator.boost.space/uhlqmxm4tzn2rpy04qga5lcip6o5rnbs"
 
 let locked = false;
 
+function showToast(text) {
+    const t = document.getElementById("toast");
+    t.innerText = text;
+    t.style.display = "block";
+    setTimeout(() => t.style.display = "none", 2000);
+}
+
 function loadData() {
     fetch(FETCH_WEBHOOK + "?t=" + Date.now())
-        .then(res => res.json())
+        .then(r => r.json())
         .then(data => {
-            document.getElementById("title").innerText = data.title || "";
-            document.getElementById("subtitle").innerText = data.subtitle || "";
+            document.getElementById("title").innerText = data.title;
+            document.getElementById("subtitle").innerText = data.subtitle;
+
+            document.getElementById("statusBox").innerText =
+                `שתית היום ${data.totalDrank} מתוך ${data.dailyLimit} מ״ל`;
 
             drawCups(data.totalDrank, data.dailyLimit);
-            drawHistory(data.history || []);
+            drawHistory(data.history.reverse());
             updateClock();
-        })
-        .catch(err => console.error("FETCH ERROR:", err));
+        });
 }
 
 function drawCups(total, limit) {
@@ -184,10 +228,11 @@ function sendDrink(amount) {
             timestamp: new Date().toISOString()
         })
     }).then(() => {
+        showToast("הדיווח התקבל");
         setTimeout(() => {
             locked = false;
             loadData();
-        }, 1200);
+        }, 1500);
     });
 }
 
@@ -216,7 +261,10 @@ function deleteRow(id) {
             action: "delete",
             record_id: id
         })
-    }).then(loadData);
+    }).then(() => {
+        showToast("הדיווח נמחק");
+        setTimeout(loadData, 1200);
+    });
 }
 
 function updateClock() {
@@ -232,4 +280,3 @@ setInterval(loadData, 60000);
 
 </body>
 </html>
-
